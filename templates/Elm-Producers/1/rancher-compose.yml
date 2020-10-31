@@ -1,0 +1,67 @@
+version: '2'
+catalog:
+  name: "VegaData-Producers"
+  version: "11.0.3"
+  description: "process data and create required datat structure including artificial data mapping engine"
+  minimum_rancher_version: v0.56.0
+  questions:
+  - variable: "sync_token"
+    type: "string"
+    required: true
+    label: "syncing token"
+    description: "token to be used to securely share the data between hosts, has to be the same as consumers sync token"
+    default: "A6E4WCK7QFLF6YIO4PG3FXEJFCXAEJ4SH"
+    required: true
+  - variable: "notebook_token"
+    type: "string"
+    required: true
+    label: "notebook token"
+    description: "token to be used to access the notebook"
+    default: "A6E4WCK7QFLF6YIO4PG3FXEJFCXAvega"
+    required: true
+  - variable: "analysis_port"
+    type: "int"
+    required: true
+    label: "analysis port"
+    description: "port to be used for analysis ui"
+    default: 8894
+    required: true
+  - variable: "base_url"
+    type: "string"
+    required: true
+    label: "base url/ domain"
+    description: "the base url that will be used for all urls. WITHOUT HTTP://"
+    default: "elmstaging.vegadata.ai"
+    required: true
+  - variable: "visualization_port"
+    type: "int"
+    required: true
+    label: "visualization port"
+    description: "port to be used for visualization ui"
+    default: 8895
+    required: true
+services:
+  vega-proxy-server:
+    scale: 1
+    start_on_create: true
+  vega-viz:
+    scale: 1
+    start_on_create: true
+  configuration:
+    scale: 1
+    start_on_create: true
+  producers-data-sync:
+    scale: 1
+    start_on_create: true
+  producers-ui:
+    scale: 1
+    start_on_create: true
+  vega-CI:
+    scale: 1
+    start_on_create: true
+  producers-data:
+    scale: 1
+    start_on_create: true
+  notebook:
+    scale: 1
+    start_on_create: true

@@ -1,0 +1,142 @@
+version: '2'
+services:
+  vega-proxy-server:
+    image: vegadata/platform-frontend:vega-web-server
+    stdin_open: true
+    volumes:
+    - web_server_config:/etc/nginx/conf.d
+    - vega_platform_static:/var/www/platform.vegadata.ai/static/
+    tty: true
+    links:
+    - producers-ui:web
+    ports:
+    - 80:80/tcp
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.scheduler.affinity:host_label: producers=true
+  vega-viz:
+    image: vegadata/platform-frontend:vegaviz
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx16g
+    stdin_open: true
+    volumes:
+    - vega-viz-vol:/metabase-data
+    tty: true
+    ports:
+    - ${visualization_port}:3000/tcp
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.scheduler.affinity:host_label: visualization=true
+  configuration:
+    image: vegadata/platform-frontend:config-data-storage
+    stdin_open: true
+    volumes:
+    - config-data:/var/lib/mysql
+    - config_data_dumps:/tmp/dumps
+    tty: true
+    links:
+    - producers-data:data
+    labels:
+      io.rancher.scheduler.affinity:host_label: producers=true
+      io.rancher.container.pull_image: always
+  producers-data-sync:
+    image: vegadata/platform-backend:consumers-data-sync
+    stdin_open: true
+    volumes:
+    - uploads:/data/shared_upload
+    tty: true
+    command:
+    - ${sync_token}
+    labels:
+      io.rancher.scheduler.affinity:host_label: producers=true
+      io.rancher.container.pull_image: always
+  producers-ui:
+    image: vegadata/platform-frontend:producers-ui
+    environment:
+      ALLOWED_HOSTS: ${base_url}
+      CONSUMER_API: http://consumerapi:18631
+      DEBUG: '0'
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUNBUFFERED: '1'
+      SQL_DATABASE: vega_webportal_db
+      SQL_ENGINE: django.db.backends.mysql
+      SQL_HOST: configuration
+      SQL_PASSWORD: Veg@dat@_2019
+      SQL_PORT: '3306'
+      SQL_USER: vega_app
+      WORKING_ENV: prod
+      NOTEBOOKS_URL: http://${base_url}:${analysis_port}/
+      VISUALIZATION_URL: http://${base_url}:${visualization_port}
+    stdin_open: true
+    working_dir: /usr/src/vega_platform_frontend
+    entrypoint:
+    - /usr/src/temp/entrypoint.sh
+    external_links:
+    - VegaData-Consumers/receiver:consumerapi
+    volumes:
+    - vega_platform:/usr/src/vega_platform_frontend
+    - vega_platform_static:/var/www/platform.vegadata.ai/static/
+    - uploads:/usr/src/vega_platform_frontend/temp_upload/shared_uploaded_files
+    - notebooks_home:/usr/src/vega_platform_frontend/notebooks
+    tty: true
+    links:
+    - vega-CI:vega-CI
+    - configuration:configuration
+    command:
+    - gunicorn
+    - vega_platform_frontend.wsgi:application
+    - --bind
+    - 0.0.0.0:8000
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.scheduler.affinity:host_label: producers=true
+  vega-CI:
+    image: vegadata/platform-frontend:vega-cicd
+    environment:
+      ACCESS_KEY: EDCB328242309B10671A
+      CONTINAR_ID: 1i201
+      KUBERNETS_HOST: elmstaging.vegadata.ai
+      PROJECT_ID: 1a5
+      SECRET_KEY: GHWCVya6FzNWFG7gS8qJwQs8iSSHwN2yJPMX7SiQ
+      TZ: Asia/Riyadh
+    stdin_open: true
+    volumes:
+    - vega-repo:/var/jenkins_home:rw
+    - vega_platform:/mnt/workspace:rw
+    tty: true
+    links:
+    - configuration:configuration
+    user: root
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.scheduler.affinity:host_label: producers=true
+  producers-data:
+    image: vegadata/platform-frontend:producers-data
+    stdin_open: true
+    volumes:
+    - config-data:/mnt/vdata/config-data
+    - config_data_dumps:/mnt/vdata/config_data_dumps
+    - vega-repo:/mnt/vdata/vega-repo
+    - vega_platform:/mnt/vdata/vega_platform
+    - web_server_config:/mnt/vdata/web_server_config
+    tty: true
+    labels:
+      io.rancher.scheduler.affinity:host_label: producers=true
+      io.rancher.container.pull_image: always
+  notebook:
+    image: vegadata/platform-backend:notebook-1
+    environment:
+      GRANT_SUDO: 'yes'
+    stdin_open: true
+    entrypoint:
+    - jupyter
+    - notebook
+    - --NotebookApp.token=${notebook_token}
+    volumes:
+    - notebooks_home:/home/jovyan/notebooks:rw
+    tty: true
+    ports:
+    - ${analysis_port}:8888/tcp
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.scheduler.affinity:host_label: analysis=true

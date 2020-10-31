@@ -1,0 +1,40 @@
+version: '2'
+services:
+  receiver:
+    image: vegadata/platform-backend:consumers
+    environment:
+      SDC_JAVA_OPTS: -Xmx4048m -Xms2048m
+    stdin_open: true
+    volumes:
+    - consumers-data:/data
+    - consumers-config:/etc/sdc
+    - consumers-resources:/resources
+    - uploads:/mnt/data
+    tty: true
+    links:
+    - consumers-config:data
+    labels:
+      io.rancher.scheduler.affinity:host_label: data=true
+      io.rancher.container.pull_image: always
+  consumers-config:
+    image: vegadata/platform-backend:consumers-data
+    stdin_open: true
+    volumes:
+    - consumers-data:/mnt/vdata/processing/pipelines-data
+    - consumers-config:/mnt/vdata/processing/pipelines-config
+    - consumers-resources:/mnt/vdata/processing/pipelines-resources
+    tty: true
+    labels:
+      io.rancher.scheduler.affinity:host_label: data=true
+      io.rancher.container.pull_image: always
+  consumers-data-sync:
+    image: vegadata/platform-backend:consumers-data-sync
+    stdin_open: true
+    volumes:
+    - uploads:/data/shared_upload
+    tty: true
+    command:
+    - ${sync_token}
+    labels:
+      io.rancher.scheduler.affinity:host_label: data=true
+      io.rancher.container.pull_image: always

@@ -1,0 +1,24 @@
+version: '2'
+catalog:
+  name: "VegaData-Consumers"
+  version: "11.0.3"
+  description: "Consume data and insert into destinatinos"
+  minimum_rancher_version: v0.56.0
+  questions:
+  - variable: "sync_token"
+    type: "string"
+    required: true
+    label: "syncing token"
+    description: "token to be used to securely share the data between hosts"
+    default: "A6E4WCK7QFLF6YIO4PG3FXEJFCXAEJ4SH"
+    required: true
+services:
+  receiver:
+    scale: 1
+    start_on_create: true
+  consumers-config:
+    scale: 1
+    start_on_create: true
+  consumers-data-sync:
+    scale: 1
+    start_on_create: true
